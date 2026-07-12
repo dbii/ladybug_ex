@@ -110,8 +110,8 @@ defmodule LadybugEx.Vector do
   """
   @spec create_index(Connection.t(), String.t(), keyword()) :: {:ok, any()} | {:error, String.t()}
   def create_index(conn, table, opts) when is_binary(table) and is_list(opts) do
-    with :ok <- Extensions.ensure_loaded(conn, "vector"),
-         {:ok, params} <- validate_create_params(table, opts) do
+    with {:ok, params} <- validate_create_params(table, opts),
+         :ok <- Extensions.ensure_loaded(conn, "vector") do
       query = build_create_query(params)
       Connection.query(conn, query)
     end
@@ -178,8 +178,8 @@ defmodule LadybugEx.Vector do
           {:ok, [search_result()]} | {:error, String.t()}
   def query_index(conn, table, index_name, opts)
       when is_binary(table) and is_binary(index_name) and is_list(opts) do
-    with :ok <- Extensions.ensure_loaded(conn, "vector"),
-         {:ok, params} <- validate_query_params(table, index_name, opts) do
+    with {:ok, params} <- validate_query_params(table, index_name, opts),
+         :ok <- Extensions.ensure_loaded(conn, "vector") do
       query = build_query_query(params)
       Connection.query(conn, query)
     end

@@ -19,9 +19,13 @@ fn main() {
             }
         }
         "linux" => {
-            for pattern in ["*4lbug*", "*yyjson*"] {
-                println!("cargo:rustc-link-arg=-Wl,--export-dynamic-symbol={pattern}");
-            }
+            // What the lbug crate's build.rs prescribes for extension support:
+            // "This also needs to be set by any crates using it if they want
+            // to use extensions". Exports all global symbols (engine included)
+            // in the dynamic symbol table. Note: GNU ld's
+            // --export-dynamic-symbol is a no-op for shared libraries, so
+            // per-pattern exports like on macOS don't work here.
+            println!("cargo:rustc-link-arg=-rdynamic");
         }
         _ => {}
     }

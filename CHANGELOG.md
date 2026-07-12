@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-07-12
+
+### Fixed
+
+- Extension loading on Linux. Two problems combined to break it: rustc's
+  generated version script hid the engine symbols from the NIF library's
+  dynamic symbol table (no stable linker flag can re-add them, so the crate
+  now links through a wrapper that strips the version script), and the BEAM
+  dlopens NIFs with RTLD_LOCAL, so the NIF now promotes itself into the
+  global symbol scope with RTLD_NOLOAD | RTLD_GLOBAL at load time. 0.2.0
+  only worked on macOS.
+- `Vector.create_index/3` and `Vector.query_index/4` validate their options
+  before attempting to load the extension, matching FTS and LLM
+
 ## [0.2.0] - 2026-07-12
 
 ### Added

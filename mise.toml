@@ -1,6 +1,6 @@
 [tools]
 rust = "latest"
-erlang = "28.0"
+erlang = "28.1"
 elixir = "1.19.5"
 
 [env]

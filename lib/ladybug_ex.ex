@@ -1,10 +1,10 @@
-defmodule RyugraphEx do
+defmodule LadybugEx do
   @moduledoc """
-  RyugraphEx - Elixir bindings for RyuGraph embedded graph database.
+  LadybugEx - Elixir bindings for LadybugDB embedded graph database.
 
-  RyuGraph is a high-performance embedded property graph database that supports
+  LadybugDB is a high-performance embedded property graph database that supports
   the Cypher query language. This library provides idiomatic Elixir bindings
-  for working with RyuGraph databases.
+  for working with LadybugDB databases.
 
   ## Features
 
@@ -13,7 +13,11 @@ defmodule RyugraphEx do
     * Thread-safe connections for concurrent operations
     * Prepared statements for efficient repeated queries
     * Transaction support
-    * Full-text and vector search capabilities
+    * Extensible architecture with official extensions:
+      * Vector search via HNSW indexing
+      * Full-text search with BM25 ranking
+      * LLM embeddings generation
+      * And many more (algo, azure, delta, duckdb, etc.)
     * In-memory and persistent database modes
 
   ## Quick Start
@@ -21,18 +25,18 @@ defmodule RyugraphEx do
   ### Creating a Database
 
       # Persistent database
-      {:ok, db} = RyugraphEx.Database.open("/path/to/database")
+      {:ok, db} = LadybugEx.Database.open("/path/to/database")
 
       # In-memory database (great for testing)
-      {:ok, db} = RyugraphEx.Database.in_memory()
+      {:ok, db} = LadybugEx.Database.in_memory()
 
   ### Establishing a Connection
 
-      {:ok, conn} = RyugraphEx.Connection.new(db)
+      {:ok, conn} = LadybugEx.Connection.new(db)
 
   ### Creating Schema
 
-      alias RyugraphEx.{Connection, Schema}
+      alias LadybugEx.{Connection, Schema}
 
       # Create node table
       Schema.create_node_table(conn, "Person", [
@@ -64,7 +68,7 @@ defmodule RyugraphEx do
 
   #### Using the Graph Module
 
-      alias RyugraphEx.Graph
+      alias LadybugEx.Graph
 
       # Create a node
       {:ok, node} = Graph.create_node(conn, "Person",
@@ -83,6 +87,62 @@ defmodule RyugraphEx do
 
       # Find shortest path
       {:ok, path} = Graph.shortest_path(conn, alice_id, bob_id)
+
+  ### Extensions
+
+  #### Vector Search
+
+      alias LadybugEx.{Extensions, Vector}
+
+      # Install and load the vector extension
+      Extensions.install_and_load!(conn, "vector")
+
+      # Create a vector index
+      Vector.create_index!(conn, "Document",
+        property: "embedding",
+        dimension: 1536,
+        metric: :cosine
+      )
+
+      # Perform similarity search
+      query_vector = [0.1, 0.2, 0.3, ...]  # Your embedding
+      {:ok, results} = Vector.query_index(conn, "Document", "Document_embedding_idx",
+        vector: query_vector,
+        k: 10
+      )
+
+  #### Full-Text Search
+
+      alias LadybugEx.{Extensions, FTS}
+
+      # Install and load the FTS extension
+      Extensions.install_and_load!(conn, "fts")
+
+      # Create a full-text search index
+      FTS.create_index!(conn, "Article",
+        properties: ["title", "content"],
+        stemmer: :english
+      )
+
+      # Search documents
+      {:ok, results} = FTS.query_index(conn, "Article", "Article_fts_title_content_idx",
+        query: "machine learning",
+        limit: 20
+      )
+
+  #### LLM Embeddings
+
+      alias LadybugEx.{Extensions, LLM}
+
+      # Install and load the LLM extension
+      Extensions.install_and_load!(conn, "llm")
+
+      # Generate embeddings (requires API keys in env vars)
+      {:ok, embedding} = LLM.create_embedding(conn,
+        "This is my text to embed",
+        provider: :openai,
+        model: "text-embedding-ada-002"
+      )
 
   ### Prepared Statements
 
@@ -106,17 +166,24 @@ defmodule RyugraphEx do
 
   ## Modules
 
-    * `RyugraphEx.Database` - Database management
-    * `RyugraphEx.Connection` - Connection and query execution
-    * `RyugraphEx.Graph` - High-level graph operations
-    * `RyugraphEx.Schema` - Schema management
-    * `RyugraphEx.PreparedStatement` - Prepared statement support
+    * `LadybugEx.Database` - Database management
+    * `LadybugEx.Connection` - Connection and query execution
+    * `LadybugEx.Graph` - High-level graph operations
+    * `LadybugEx.Schema` - Schema management
+    * `LadybugEx.PreparedStatement` - Prepared statement support
+
+  ### Extension Modules
+
+    * `LadybugEx.Extensions` - Generic extension management
+    * `LadybugEx.Vector` - Vector similarity search (requires vector extension)
+    * `LadybugEx.FTS` - Full-text search with BM25 (requires fts extension)
+    * `LadybugEx.LLM` - LLM embeddings generation (requires llm extension)
 
   ## Configuration
 
   Database configuration options can be passed when opening:
 
-      RyugraphEx.Database.open("/path/to/db",
+      LadybugEx.Database.open("/path/to/db",
         buffer_pool_size: 1024 * 1024 * 256,  # 256MB
         max_num_threads: 8,
         enable_compression: true
@@ -133,7 +200,7 @@ defmodule RyugraphEx do
   """
 
   @doc """
-  Returns the version of the RyugraphEx library.
+  Returns the version of the LadybugEx library.
   """
   def version, do: "0.1.0"
 

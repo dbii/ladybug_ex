@@ -1,6 +1,6 @@
-defmodule RyugraphEx.SchemaTest do
+defmodule LadybugEx.SchemaTest do
   use ExUnit.Case
-  alias RyugraphEx.{Database, Connection, Schema}
+  alias LadybugEx.{Database, Connection, Schema}
 
   setup do
     {:ok, db} = Database.in_memory()
@@ -26,7 +26,9 @@ defmodule RyugraphEx.SchemaTest do
                    {:id, :int64},
                    {:name, :string},
                    {:email, :string}
-                 ], primary_key: [:id])
+                 ],
+                 primary_key: [:id]
+               )
     end
 
     test "creates node table with inline primary key", %{conn: conn} do
@@ -47,7 +49,9 @@ defmodule RyugraphEx.SchemaTest do
                    {:user_id, :int64},
                    {:session_id, :string},
                    {:created_at, :timestamp}
-                 ], primary_key: [:user_id, :session_id])
+                 ],
+                 primary_key: [:user_id, :session_id]
+               )
     end
 
     test "supports all basic data types", %{conn: conn} do
@@ -124,7 +128,7 @@ defmodule RyugraphEx.SchemaTest do
     end
 
     test "fails without properties", %{conn: conn} do
-      # RyuGraph may allow tables without properties
+      # LadybugDB may allow tables without properties
       result = Schema.create_node_table(conn, "Empty", [])
       assert match?({:ok, :created}, result) or match?({:error, _}, result)
     end
@@ -263,14 +267,14 @@ defmodule RyugraphEx.SchemaTest do
     end
 
     test "fails on non-existent table", %{conn: conn} do
-      # RyuGraph may silently succeed for indexes on non-existent tables
+      # LadybugDB may silently succeed for indexes on non-existent tables
       result = Schema.create_index(conn, "NonExistent", :id)
       # Accept either success or failure
       assert match?({:ok, :created}, result) or match?({:error, _}, result)
     end
 
     test "fails on non-existent column", %{conn: conn} do
-      # RyuGraph may silently succeed for indexes on non-existent columns
+      # LadybugDB may silently succeed for indexes on non-existent columns
       result = Schema.create_index(conn, "Person", :bad_column)
       # Accept either success or failure
       assert match?({:ok, :created}, result) or match?({:error, _}, result)
@@ -462,7 +466,7 @@ defmodule RyugraphEx.SchemaTest do
     end
 
     test "identifies primary key columns", %{conn: conn} do
-      # RyuGraph only supports single primary key (first one in composite list)
+      # LadybugDB only supports single primary key (first one in composite list)
       Schema.create_node_table!(
         conn,
         "Composite",
@@ -470,18 +474,20 @@ defmodule RyugraphEx.SchemaTest do
           {:key1, :int64},
           {:key2, :string},
           {:data, :string}
-        ], primary_key: [:key1, :key2])
+        ],
+        primary_key: [:key1, :key2]
+      )
 
       assert {:ok, info} = Schema.describe_table(conn, "Composite")
 
       primary_columns = Enum.filter(info[:columns], & &1[:is_primary])
-      # RyuGraph limitation: only first key is used as primary key
+      # LadybugDB limitation: only first key is used as primary key
       assert length(primary_columns) == 1
     end
 
     test "returns error for non-existent table", %{conn: conn} do
       assert {:error, reason} = Schema.describe_table(conn, "NonExistent")
-      # RyuGraph returns a catalog exception message
+      # LadybugDB returns a catalog exception message
       assert reason =~ "NonExistent"
     end
   end
@@ -586,7 +592,9 @@ defmodule RyugraphEx.SchemaTest do
                  "User",
                  [
                    {:since, :timestamp}
-                 ], multiplicity: :many_to_many)
+                 ],
+                 multiplicity: :many_to_many
+               )
 
       assert {:ok, :created} =
                Schema.create_rel_table(
@@ -596,7 +604,9 @@ defmodule RyugraphEx.SchemaTest do
                  "Post",
                  [
                    {:timestamp, :timestamp}
-                 ], multiplicity: :one_to_many)
+                 ],
+                 multiplicity: :one_to_many
+               )
 
       assert {:ok, :created} =
                Schema.create_rel_table(
@@ -606,7 +616,9 @@ defmodule RyugraphEx.SchemaTest do
                  "Post",
                  [
                    {:timestamp, :timestamp}
-                 ], multiplicity: :many_to_many)
+                 ],
+                 multiplicity: :many_to_many
+               )
 
       assert {:ok, :created} =
                Schema.create_rel_table(
@@ -617,7 +629,9 @@ defmodule RyugraphEx.SchemaTest do
                  [
                    {:joined_at, :timestamp},
                    {:role, :string}
-                 ], multiplicity: :many_to_many)
+                 ],
+                 multiplicity: :many_to_many
+               )
 
       # Complex indexes
       assert {:ok, :created} = Schema.create_index(conn, "User", :username)

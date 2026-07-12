@@ -1,13 +1,13 @@
-defmodule RyugraphEx.Connection do
+defmodule LadybugEx.Connection do
   @moduledoc """
-  Module for managing connections to a RyuGraph database.
+  Module for managing connections to a LadybugDB database.
 
   A connection is required to execute queries against a database.
   Multiple connections can be created for the same database to enable
   concurrent operations, though write queries must be executed sequentially.
   """
 
-  alias RyugraphEx.{Database, Native, PreparedStatement}
+  alias LadybugEx.{Database, Native, PreparedStatement}
 
   @type t :: reference()
 
@@ -16,12 +16,12 @@ defmodule RyugraphEx.Connection do
 
   ## Parameters
 
-    * `database` - A database reference obtained from `RyugraphEx.Database.open/2` or `RyugraphEx.Database.in_memory/1`
+    * `database` - A database reference obtained from `LadybugEx.Database.open/2` or `LadybugEx.Database.in_memory/1`
 
   ## Examples
 
-      iex> {:ok, db} = RyugraphEx.Database.in_memory()
-      iex> {:ok, conn} = RyugraphEx.Connection.new(db)
+      iex> {:ok, db} = LadybugEx.Database.in_memory()
+      iex> {:ok, conn} = LadybugEx.Connection.new(db)
       {:ok, #Reference<...>}
 
   ## Returns
@@ -42,8 +42,8 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> db = RyugraphEx.Database.in_memory!()
-      iex> conn = RyugraphEx.Connection.new!(db)
+      iex> db = LadybugEx.Database.in_memory!()
+      iex> conn = LadybugEx.Connection.new!(db)
       #Reference<...>
 
   """
@@ -70,13 +70,13 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> RyugraphEx.Connection.query(conn, "CREATE NODE TABLE Person(name STRING, age INT64, PRIMARY KEY(name));")
+      iex> LadybugEx.Connection.query(conn, "CREATE NODE TABLE Person(name STRING, age INT64, PRIMARY KEY(name));")
       {:ok, []}
 
-      iex> RyugraphEx.Connection.query(conn, "CREATE (:Person {name: 'Alice', age: 25});")
+      iex> LadybugEx.Connection.query(conn, "CREATE (:Person {name: 'Alice', age: 25});")
       {:ok, []}
 
-      iex> RyugraphEx.Connection.query(conn, "MATCH (p:Person) RETURN p.name AS name, p.age AS age;")
+      iex> LadybugEx.Connection.query(conn, "MATCH (p:Person) RETURN p.name AS name, p.age AS age;")
       {:ok, [%{name: "Alice", age: 25}]}
 
   ## Returns
@@ -97,7 +97,7 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> RyugraphEx.Connection.query!(conn, "MATCH (p:Person) RETURN p.name AS name;")
+      iex> LadybugEx.Connection.query!(conn, "MATCH (p:Person) RETURN p.name AS name;")
       [%{name: "Alice"}]
 
   """
@@ -123,7 +123,7 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> {:ok, prepared} = RyugraphEx.Connection.prepare(conn,
+      iex> {:ok, prepared} = LadybugEx.Connection.prepare(conn,
       ...>   "CREATE (:Person {name: $name, age: $age});"
       ...> )
       {:ok, #Reference<...>}
@@ -163,17 +163,17 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> prepared = RyugraphEx.Connection.prepare!(conn,
+      iex> prepared = LadybugEx.Connection.prepare!(conn,
       ...>   "CREATE (:Person {name: $name, age: $age});"
       ...> )
-      iex> RyugraphEx.Connection.execute(conn, prepared,
+      iex> LadybugEx.Connection.execute(conn, prepared,
       ...>   name: "Bob",
       ...>   age: 30
       ...> )
       {:ok, []}
 
       # Using a map for parameters
-      iex> RyugraphEx.Connection.execute(conn, prepared,
+      iex> LadybugEx.Connection.execute(conn, prepared,
       ...>   %{name: "Charlie", age: 35}
       ...> )
       {:ok, []}
@@ -227,9 +227,9 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> RyugraphEx.Connection.transaction(conn, fn conn ->
-      ...>   with {:ok, _} <- RyugraphEx.Connection.query(conn, "CREATE (:Person {name: 'Alice'});"),
-      ...>        {:ok, _} <- RyugraphEx.Connection.query(conn, "CREATE (:Person {name: 'Bob'});") do
+      iex> LadybugEx.Connection.transaction(conn, fn conn ->
+      ...>   with {:ok, _} <- LadybugEx.Connection.query(conn, "CREATE (:Person {name: 'Alice'});"),
+      ...>        {:ok, _} <- LadybugEx.Connection.query(conn, "CREATE (:Person {name: 'Bob'});") do
       ...>     {:ok, :success}
       ...>   end
       ...> end)
@@ -275,7 +275,7 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> RyugraphEx.Connection.set_max_threads(conn, 4)
+      iex> LadybugEx.Connection.set_max_threads(conn, 4)
       :ok
 
   """
@@ -297,7 +297,7 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> RyugraphEx.Connection.interrupt(conn)
+      iex> LadybugEx.Connection.interrupt(conn)
       :ok
 
   """
@@ -317,7 +317,7 @@ defmodule RyugraphEx.Connection do
 
   ## Examples
 
-      iex> RyugraphEx.Connection.set_query_timeout(conn, 5000)
+      iex> LadybugEx.Connection.set_query_timeout(conn, 5000)
       :ok
 
   """

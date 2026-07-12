@@ -1,12 +1,12 @@
-defmodule RyugraphEx.Database do
+defmodule LadybugEx.Database do
   @moduledoc """
-  Module for managing RyuGraph database instances.
+  Module for managing LadybugDB database instances.
 
-  RyuGraph is an embedded property graph database that supports the Cypher query language.
+  LadybugDB is an embedded property graph database that supports the Cypher query language.
   This module provides functions to create and manage database instances.
   """
 
-  alias RyugraphEx.Native
+  alias LadybugEx.Native
 
   @type t :: reference()
 
@@ -45,10 +45,10 @@ defmodule RyugraphEx.Database do
 
   ## Examples
 
-      iex> {:ok, db} = RyugraphEx.Database.open("/tmp/mydb")
+      iex> {:ok, db} = LadybugEx.Database.open("/tmp/mydb")
       {:ok, #Reference<...>}
 
-      iex> {:ok, db} = RyugraphEx.Database.open("/tmp/mydb",
+      iex> {:ok, db} = LadybugEx.Database.open("/tmp/mydb",
       ...>   buffer_pool_size: 1024 * 1024 * 100,
       ...>   max_num_threads: 4
       ...> )
@@ -77,10 +77,10 @@ defmodule RyugraphEx.Database do
 
   ## Examples
 
-      iex> {:ok, db} = RyugraphEx.Database.in_memory()
+      iex> {:ok, db} = LadybugEx.Database.in_memory()
       {:ok, #Reference<...>}
 
-      iex> {:ok, db} = RyugraphEx.Database.in_memory(max_num_threads: 2)
+      iex> {:ok, db} = LadybugEx.Database.in_memory(max_num_threads: 2)
       {:ok, #Reference<...>}
 
   ## Returns
@@ -101,7 +101,7 @@ defmodule RyugraphEx.Database do
 
   ## Examples
 
-      iex> db = RyugraphEx.Database.open!("/tmp/mydb")
+      iex> db = LadybugEx.Database.open!("/tmp/mydb")
       #Reference<...>
 
   """
@@ -120,7 +120,7 @@ defmodule RyugraphEx.Database do
 
   ## Examples
 
-      iex> db = RyugraphEx.Database.in_memory!()
+      iex> db = LadybugEx.Database.in_memory!()
       #Reference<...>
 
   """

@@ -1,10 +1,10 @@
-defmodule RyugraphEx.Native do
+defmodule LadybugEx.Native do
   @moduledoc """
-  NIF module for RyuGraph database operations.
+  NIF module for LadybugDB database operations.
   This module provides the low-level interface to the Rust implementation.
   """
 
-  use Rustler, otp_app: :ryugraph_ex, crate: "ryugraph_nif"
+  use Rustler, otp_app: :ladybug_ex, crate: "ladybug_nif"
 
   # Database operations
   def open_database(_path, _config), do: :erlang.nif_error(:nif_not_loaded)

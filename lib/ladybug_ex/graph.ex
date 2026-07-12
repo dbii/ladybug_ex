@@ -1,12 +1,12 @@
-defmodule RyugraphEx.Graph do
+defmodule LadybugEx.Graph do
   @moduledoc """
-  High-level graph operations for RyuGraph.
+  High-level graph operations for LadybugDB.
 
   This module provides Elixir-friendly functions for common graph operations,
   abstracting away the Cypher query language for simple use cases.
   """
 
-  alias RyugraphEx.Connection
+  alias LadybugEx.Connection
 
   @doc """
   Creates a node with the given label and properties.
@@ -19,7 +19,7 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.create_node(conn, "Person", name: "Alice", age: 25)
+      iex> LadybugEx.Graph.create_node(conn, "Person", name: "Alice", age: 25)
       {:ok, %{node: true, id: ..., label: "Person", properties: %{name: "Alice", age: 25}}}
 
   """
@@ -64,7 +64,7 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.create_relationship(conn, node1_id, node2_id, "KNOWS",
+      iex> LadybugEx.Graph.create_relationship(conn, node1_id, node2_id, "KNOWS",
       ...>   since: 2020
       ...> )
       {:ok, %{rel: true, id: ..., label: "KNOWS", src: ..., dst: ..., properties: %{since: 2020}}}
@@ -166,13 +166,13 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.find_nodes(conn, "Person")
+      iex> LadybugEx.Graph.find_nodes(conn, "Person")
       {:ok, [%{node: true, label: "Person", properties: %{...}}, ...]}
 
-      iex> RyugraphEx.Graph.find_nodes(conn, "Person", %{age: 25})
+      iex> LadybugEx.Graph.find_nodes(conn, "Person", %{age: 25})
       {:ok, [%{node: true, label: "Person", properties: %{name: "Alice", age: 25}}]}
 
-      iex> RyugraphEx.Graph.find_nodes(conn, "Person", "n.age > 20", limit: 10)
+      iex> LadybugEx.Graph.find_nodes(conn, "Person", "n.age > 20", limit: 10)
       {:ok, [...]}
 
   """
@@ -229,10 +229,10 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.shortest_path(conn, node1_id, node2_id)
+      iex> LadybugEx.Graph.shortest_path(conn, node1_id, node2_id)
       {:ok, %{nodes: [...], rels: [...]}}
 
-      iex> RyugraphEx.Graph.shortest_path(conn, node1_id, node2_id,
+      iex> LadybugEx.Graph.shortest_path(conn, node1_id, node2_id,
       ...>   rel_label: "KNOWS",
       ...>   max_length: 3
       ...> )
@@ -254,7 +254,7 @@ defmodule RyugraphEx.Graph do
     from_id = extract_user_id(from_node_id)
     to_id = extract_user_id(to_node_id)
 
-    # Since RyuGraph doesn't support shortestPath function, we need to find paths
+    # Since LadybugDB doesn't support shortestPath function, we need to find paths
     # and select the shortest one ourselves
     # Try with increasing path lengths to find the shortest
     find_shortest_path_iteratively(conn, from_id, to_id, rel_pattern, 1, max_length)
@@ -313,10 +313,10 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.get_neighbors(conn, node_id)
+      iex> LadybugEx.Graph.get_neighbors(conn, node_id)
       {:ok, [%{node: true, ...}, ...]}
 
-      iex> RyugraphEx.Graph.get_neighbors(conn, node_id,
+      iex> LadybugEx.Graph.get_neighbors(conn, node_id,
       ...>   direction: :both,
       ...>   rel_label: "KNOWS"
       ...> )
@@ -374,7 +374,7 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.update_node(conn, node_id, age: 26, city: "New York")
+      iex> LadybugEx.Graph.update_node(conn, node_id, age: 26, city: "New York")
       {:ok, %{node: true, properties: %{age: 26, city: "New York", ...}}}
 
   """
@@ -492,10 +492,10 @@ defmodule RyugraphEx.Graph do
 
   ## Examples
 
-      iex> RyugraphEx.Graph.delete_node(conn, node_id)
+      iex> LadybugEx.Graph.delete_node(conn, node_id)
       {:ok, :deleted}
 
-      iex> RyugraphEx.Graph.delete_node(conn, node_id, detach: true)
+      iex> LadybugEx.Graph.delete_node(conn, node_id, detach: true)
       {:ok, :deleted}
 
   """
@@ -676,7 +676,7 @@ defmodule RyugraphEx.Graph do
   defp format_path(path), do: path
 
   # Normalize node properties to ensure consistency
-  # RyuGraph returns all schema properties, so just pass through
+  # LadybugDB returns all schema properties, so just pass through
   defp normalize_node_properties(node) when is_map(node) do
     node
   end

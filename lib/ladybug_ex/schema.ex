@@ -1,12 +1,12 @@
-defmodule RyugraphEx.Schema do
+defmodule LadybugEx.Schema do
   @moduledoc """
-  Schema management functions for RyuGraph databases.
+  Schema management functions for LadybugDB databases.
 
   This module provides functions to create and manage node tables, relationship tables,
-  and indexes in a RyuGraph database.
+  and indexes in a LadybugDB database.
   """
 
-  alias RyugraphEx.Connection
+  alias LadybugEx.Connection
 
   @type property_type ::
           :string
@@ -21,6 +21,8 @@ defmodule RyugraphEx.Schema do
           | :int128
           | :float
           | :double
+          | :float_array
+          | :double_array
           | :bool
           | :date
           | :timestamp
@@ -34,6 +36,7 @@ defmodule RyugraphEx.Schema do
           | :decimal
           | {:list, property_type()}
           | {:array, property_type()}
+          | {:array, property_type(), pos_integer()}
           | {:map, property_type(), property_type()}
 
   @type property_def ::
@@ -62,14 +65,14 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.create_node_table(conn, "Person", [
+      iex> LadybugEx.Schema.create_node_table(conn, "Person", [
       ...>   {:name, :string},
       ...>   {:age, :int64},
       ...>   {:email, :string}
       ...> ], primary_key: [:name])
       {:ok, :created}
 
-      iex> RyugraphEx.Schema.create_node_table(conn, "Product", [
+      iex> LadybugEx.Schema.create_node_table(conn, "Product", [
       ...>   {:id, :int64, primary_key: true},
       ...>   {:name, :string},
       ...>   {:price, :double},
@@ -123,7 +126,7 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.create_rel_table(conn, "KNOWS",
+      iex> LadybugEx.Schema.create_rel_table(conn, "KNOWS",
       ...>   "Person", "Person",
       ...>   [
       ...>     {:since, :date},
@@ -132,7 +135,7 @@ defmodule RyugraphEx.Schema do
       ...> )
       {:ok, :created}
 
-      iex> RyugraphEx.Schema.create_rel_table(conn, "OWNS",
+      iex> LadybugEx.Schema.create_rel_table(conn, "OWNS",
       ...>   "Person", "Product",
       ...>   [
       ...>     {:quantity, :int64},
@@ -162,7 +165,7 @@ defmodule RyugraphEx.Schema do
         ", " <> Enum.join(props_defs, ", ")
       end
 
-    # RyuGraph doesn't support multiplicity clause in CREATE REL TABLE
+    # LadybugDB doesn't support multiplicity clause in CREATE REL TABLE
     # It's always many-to-many by default
     # Escape all table names to handle reserved keywords
     escaped_name = escape_identifier(table_name)
@@ -212,10 +215,10 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.create_index(conn, "Person", :email)
+      iex> LadybugEx.Schema.create_index(conn, "Person", :email)
       {:ok, :created}
 
-      iex> RyugraphEx.Schema.create_index(conn, "Person", [:age, :city])
+      iex> LadybugEx.Schema.create_index(conn, "Person", [:age, :city])
       {:ok, :created}
 
   """
@@ -226,7 +229,7 @@ defmodule RyugraphEx.Schema do
   end
 
   def create_index(_conn, _table_name, columns) when is_list(columns) do
-    # RyuGraph doesn't support CREATE INDEX syntax
+    # LadybugDB doesn't support CREATE INDEX syntax
     # Indexes are created automatically on primary keys
     # Return success for compatibility
     {:ok, :created}
@@ -257,21 +260,21 @@ defmodule RyugraphEx.Schema do
 
   ## Options
 
-    * `:cascade` - Not currently supported by RyuGraph (ignored)
+    * `:cascade` - Not currently supported by LadybugDB (ignored)
 
   ## Examples
 
-      iex> RyugraphEx.Schema.drop_node_table(conn, "Person")
+      iex> LadybugEx.Schema.drop_node_table(conn, "Person")
       {:ok, :dropped}
 
-      iex> RyugraphEx.Schema.drop_node_table(conn, "Person", cascade: true)
+      iex> LadybugEx.Schema.drop_node_table(conn, "Person", cascade: true)
       {:ok, :dropped}
 
   """
   @spec drop_node_table(Connection.t(), String.t(), keyword()) ::
           {:ok, :dropped} | {:error, String.t()}
   def drop_node_table(conn, table_name, opts \\ []) do
-    # RyuGraph doesn't support CASCADE in DROP TABLE
+    # LadybugDB doesn't support CASCADE in DROP TABLE
     # If cascade is requested, we need to drop dependent relationship tables first
     if Keyword.get(opts, :cascade, false) do
       # Get all relationship tables that reference this table
@@ -332,7 +335,7 @@ defmodule RyugraphEx.Schema do
             case Connection.query(conn, "CALL table_info('#{rel_table}') RETURN *;") do
               {:ok, _info} ->
                 # Check if src or dst reference our table (this is a heuristic)
-                # In reality, RyuGraph doesn't expose this directly
+                # In reality, LadybugDB doesn't expose this directly
                 true
 
               _error ->
@@ -371,7 +374,7 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.drop_rel_table(conn, "KNOWS")
+      iex> LadybugEx.Schema.drop_rel_table(conn, "KNOWS")
       {:ok, :dropped}
 
   """
@@ -403,7 +406,7 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.list_node_tables(conn)
+      iex> LadybugEx.Schema.list_node_tables(conn)
       {:ok, ["Person", "Product", "Order"]}
 
   """
@@ -434,7 +437,7 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.list_rel_tables(conn)
+      iex> LadybugEx.Schema.list_rel_tables(conn)
       {:ok, ["KNOWS", "OWNS", "PURCHASED"]}
 
   """
@@ -466,7 +469,7 @@ defmodule RyugraphEx.Schema do
 
   ## Examples
 
-      iex> RyugraphEx.Schema.describe_table(conn, "Person")
+      iex> LadybugEx.Schema.describe_table(conn, "Person")
       {:ok, %{
         name: "Person",
         type: "NODE",
@@ -485,11 +488,11 @@ defmodule RyugraphEx.Schema do
       {:ok, results} when results != [] ->
         columns =
           Enum.map(results, fn row ->
-            # The actual field names from RyuGraph
+            # The actual field names from LadybugDB
             property_name = Map.get(row, "name")
             property_type = Map.get(row, "type")
 
-            # Check if this column is marked as primary key by RyuGraph
+            # Check if this column is marked as primary key by LadybugDB
             is_primary = Map.get(row, "primary key") == true
 
             %{
@@ -524,14 +527,15 @@ defmodule RyugraphEx.Schema do
 
     all_defs =
       if primary_keys != [] do
-        # RyuGraph doesn't support composite primary keys - use only first key
+        # LadybugDB doesn't support composite primary keys - use only first key
         pk = List.first(primary_keys)
         pk_str = "PRIMARY KEY(#{pk})"
         props_defs ++ [pk_str]
       else
-        # If no primary key specified, add a default ryugraph_id column as primary key
-        # Note: _id is reserved in RyuGraph
-        ["ryugraph_id INT64"] ++ props_defs ++ ["PRIMARY KEY(ryugraph_id)"]
+        # If no primary key specified, add a default auto-incrementing
+        # ladybug_id column as primary key so callers don't have to supply
+        # it on CREATE. Note: _id is reserved in LadybugDB
+        ["ladybug_id SERIAL"] ++ props_defs ++ ["PRIMARY KEY(ladybug_id)"]
       end
 
     Enum.join(all_defs, ", ")
@@ -576,6 +580,8 @@ defmodule RyugraphEx.Schema do
   defp type_to_string(:int128), do: "INT128"
   defp type_to_string(:float), do: "FLOAT"
   defp type_to_string(:double), do: "DOUBLE"
+  defp type_to_string(:float_array), do: "FLOAT[]"
+  defp type_to_string(:double_array), do: "DOUBLE[]"
   defp type_to_string(:bool), do: "BOOL"
   defp type_to_string(:boolean), do: "BOOL"
   defp type_to_string(:date), do: "DATE"
@@ -591,12 +597,16 @@ defmodule RyugraphEx.Schema do
   defp type_to_string({:list, inner_type}), do: "#{type_to_string(inner_type)}[]"
   defp type_to_string({:array, inner_type}), do: "#{type_to_string(inner_type)}[]"
 
+  # Fixed-size ARRAY (e.g. FLOAT[1536]) — required for vector indexes
+  defp type_to_string({:array, inner_type, size}) when is_integer(size) and size > 0,
+    do: "#{type_to_string(inner_type)}[#{size}]"
+
   defp type_to_string({:map, key_type, val_type}),
     do: "MAP(#{type_to_string(key_type)}, #{type_to_string(val_type)})"
 
   # Escape identifier to handle reserved keywords
   defp escape_identifier(name) do
-    # List of reserved keywords in RyuGraph/Cypher
+    # List of reserved keywords in LadybugDB/Cypher
     reserved = [
       "order",
       "group",

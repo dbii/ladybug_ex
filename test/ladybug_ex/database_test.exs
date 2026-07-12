@@ -1,11 +1,11 @@
-defmodule RyugraphEx.DatabaseTest do
+defmodule LadybugEx.DatabaseTest do
   use ExUnit.Case
-  alias RyugraphEx.Database
+  alias LadybugEx.Database
 
   setup do
     # Ensure a clean temp directory for each test
     tmp_dir = System.tmp_dir!()
-    db_path = Path.join(tmp_dir, "test_ryugraph_#{System.unique_integer([:positive])}")
+    db_path = Path.join(tmp_dir, "test_ladybug_#{System.unique_integer([:positive])}")
 
     on_exit(fn ->
       File.rm_rf(db_path)
@@ -153,7 +153,7 @@ defmodule RyugraphEx.DatabaseTest do
     end
 
     test "raises on invalid configuration" do
-      # RyuGraph may not validate all configs upfront, so this may succeed
+      # LadybugDB may not validate all configs upfront, so this may succeed
       # or fail depending on underlying implementation
       result =
         try do

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build script for RyugraphEx
+# Build script for LadybugEx
 # This script sets up the proper environment for building the Rust NIF
 
 set -e
@@ -32,7 +32,7 @@ echo "Fetching dependencies..."
 mix deps.get
 
 # Compile the project
-echo "Compiling RyugraphEx..."
+echo "Compiling LadybugEx..."
 mix compile
 
 echo "Build complete!"

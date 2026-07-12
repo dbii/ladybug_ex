@@ -1,38 +1,38 @@
-defmodule RyugraphEx.MixProject do
+defmodule LadybugEx.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :ryugraph_ex,
+      app: :ladybug_ex,
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: Mix.compilers(),
       rustler_crates: [
-        ryugraph_nif: [
-          path: "native/ryugraph_nif",
+        ladybug_nif: [
+          path: "native/ladybug_nif",
           mode: rustc_mode(Mix.env())
         ]
       ],
 
       # Hex.pm package metadata
       description:
-        "Elixir NIF bindings for RyuGraph - an embedded property graph database with Cypher query support",
+        "Elixir NIF bindings for LadybugDB - an embedded property graph database with Cypher query support",
       package: package(),
 
       # Documentation
-      name: "RyugraphEx",
-      source_url: "https://github.com/tylerdavis/ryugraph_ex",
-      homepage_url: "https://github.com/tylerdavis/ryugraph_ex",
+      name: "LadybugEx",
+      source_url: "https://github.com/tylerdavis/ladybug_ex",
+      homepage_url: "https://github.com/tylerdavis/ladybug_ex",
       docs: [
-        main: "RyugraphEx",
+        main: "LadybugEx",
         extras: ["README.md", "CHANGELOG.md"],
         groups_for_modules: [
-          Core: [RyugraphEx, RyugraphEx.Database, RyugraphEx.Connection],
-          "Graph Operations": [RyugraphEx.Graph],
-          "Schema Management": [RyugraphEx.Schema],
-          Internal: [RyugraphEx.Native]
+          Core: [LadybugEx, LadybugEx.Database, LadybugEx.Connection],
+          "Graph Operations": [LadybugEx.Graph],
+          "Schema Management": [LadybugEx.Schema],
+          Internal: [LadybugEx.Native]
         ]
       ]
     ]
@@ -49,7 +49,7 @@ defmodule RyugraphEx.MixProject do
   defp deps do
     [
       {:rustler, "~> 0.35.0", runtime: false},
-      {:ex_doc, "~> 0.34.0", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.35.0", only: :dev, runtime: false}
     ]
   end
 
@@ -58,18 +58,18 @@ defmodule RyugraphEx.MixProject do
 
   defp package do
     [
-      name: "ryugraph_ex",
+      name: "ladybug_ex",
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/tylerdavis/ryugraph_ex",
-        "RyuGraph" => "https://github.com/predictable-labs/ryugraph",
-        "RyuGraph Website" => "https://www.ryugraph.io"
+        "GitHub" => "https://github.com/tylerdavis/ladybug_ex",
+        "LadybugDB" => "https://github.com/lbugdb/lbug",
+        "LadybugDB Website" => "https://www.ladybugdb.com"
       },
       files: ~w(
         lib
-        native/ryugraph_nif/src
-        native/ryugraph_nif/Cargo.toml
-        native/ryugraph_nif/Cargo.lock
+        native/ladybug_nif/src
+        native/ladybug_nif/Cargo.toml
+        native/ladybug_nif/Cargo.lock
         mix.exs
         README.md
         CHANGELOG.md

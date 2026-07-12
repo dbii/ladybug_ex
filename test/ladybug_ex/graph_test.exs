@@ -1,6 +1,6 @@
-defmodule RyugraphEx.GraphTest do
+defmodule LadybugEx.GraphTest do
   use ExUnit.Case
-  alias RyugraphEx.{Database, Connection, Graph, Schema}
+  alias LadybugEx.{Database, Connection, Graph, Schema}
 
   setup do
     {:ok, db} = Database.in_memory()
@@ -724,7 +724,7 @@ defmodule RyugraphEx.GraphTest do
     end
 
     test "returns error for non-existent node", %{conn: conn} do
-      # RyuGraph allows idempotent deletes - deleting non-existent node succeeds
+      # LadybugDB allows idempotent deletes - deleting non-existent node succeeds
       result = Graph.delete_node(conn, 999_999)
       assert match?({:ok, :deleted}, result) or match?({:error, _}, result)
     end

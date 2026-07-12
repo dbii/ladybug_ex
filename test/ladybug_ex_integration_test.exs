@@ -1,6 +1,6 @@
-defmodule RyugraphExIntegrationTest do
+defmodule LadybugExIntegrationTest do
   use ExUnit.Case
-  alias RyugraphEx.{Database, Connection, Schema, Graph}
+  alias LadybugEx.{Database, Connection, Schema, Graph}
 
   @moduletag :integration
 

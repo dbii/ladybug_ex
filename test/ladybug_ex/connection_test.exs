@@ -1,6 +1,6 @@
-defmodule RyugraphEx.ConnectionTest do
+defmodule LadybugEx.ConnectionTest do
   use ExUnit.Case
-  alias RyugraphEx.{Database, Connection}
+  alias LadybugEx.{Database, Connection}
 
   setup do
     {:ok, db} = Database.in_memory()
@@ -162,7 +162,7 @@ defmodule RyugraphEx.ConnectionTest do
 
     test "handles syntax errors gracefully", %{conn: conn} do
       assert {:error, reason} = Connection.query(conn, "INVALID CYPHER QUERY")
-      # RyuGraph may return different error messages for syntax errors
+      # LadybugDB may return different error messages for syntax errors
       assert reason =~ "syntax" or reason =~ "parse" or reason =~ "Parser" or reason =~ "Invalid"
     end
 
@@ -555,7 +555,7 @@ defmodule RyugraphEx.ConnectionTest do
     end
 
     test "write operations are serialized", %{db: db} do
-      # Note: This behavior depends on RyuGraph's concurrency model
+      # Note: This behavior depends on LadybugDB's concurrency model
       connections = for _ <- 1..3, do: elem(Connection.new(db), 1)
 
       tasks =

@@ -1,6 +1,6 @@
 use parking_lot::Mutex;
 use rustler::{Encoder, Env, Error, NifResult, OwnedBinary, ResourceArc, Term};
-use ryugraph::{Connection, Database, PreparedStatement, SystemConfig, Value, QueryResult};
+use lbug::{Connection, Database, PreparedStatement, SystemConfig, Value, QueryResult};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
@@ -36,7 +36,7 @@ mod atoms {
 }
 
 #[derive(Error, Debug)]
-pub enum RyugraphError {
+pub enum LadybugError {
     #[error("Database error: {0}")]
     Database(String),
 
@@ -50,13 +50,13 @@ pub enum RyugraphError {
     TypeConversion(String),
 }
 
-impl Encoder for RyugraphError {
+impl Encoder for LadybugError {
     fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
         let error_atom = match self {
-            RyugraphError::Database(_) => atoms::database_error(),
-            RyugraphError::Connection(_) => atoms::connection_error(),
-            RyugraphError::Query(_) => atoms::query_error(),
-            RyugraphError::TypeConversion(_) => atoms::type_conversion_error(),
+            LadybugError::Database(_) => atoms::database_error(),
+            LadybugError::Connection(_) => atoms::connection_error(),
+            LadybugError::Query(_) => atoms::query_error(),
+            LadybugError::TypeConversion(_) => atoms::type_conversion_error(),
         };
         (error_atom, self.to_string()).encode(env)
     }
@@ -171,6 +171,8 @@ fn value_to_term<'a>(env: Env<'a>, value: &Value) -> NifResult<Term<'a>> {
         Value::TimestampSec(t) => Ok(t.to_string().encode(env)),
         Value::Interval(i) => Ok(i.to_string().encode(env)),
         Value::UUID(u) => Ok(u.to_string().encode(env)),
+        // JSON values (json extension) are returned as their serialized string
+        Value::Json(j) => Ok(j.to_string().encode(env)),
         Value::List(_, items) => {
             let mut elixir_list = Vec::new();
             for item in items {
@@ -432,7 +434,7 @@ fn execute<'a>(
     // Get the PreparedStatement from raw pointer - UNSAFE
     let stmt = unsafe { &mut *prepared_resource.stmt };
 
-    // Convert Elixir terms to RyuGraph Values with proper lifetime management
+    // Convert Elixir terms to Ladybug Values with proper lifetime management
     let params_with_values: Vec<(String, Value)> = params
         .into_iter()
         .map(|(name, term)| Ok((name, term_to_value(term)?)))
@@ -455,7 +457,7 @@ fn execute<'a>(
     }
 }
 
-// Helper function to convert Elixir terms to RyuGraph Values
+// Helper function to convert Elixir terms to Ladybug Values
 fn term_to_value(term: Term) -> NifResult<Value> {
     if let Ok(i) = term.decode::<i64>() {
         Ok(Value::Int64(i))
@@ -468,7 +470,7 @@ fn term_to_value(term: Term) -> NifResult<Value> {
     } else if term.is_atom() {
         // Check for nil
         if term.atom_to_string().unwrap_or_default() == "nil" {
-            Ok(Value::Null(ryugraph::LogicalType::Any))
+            Ok(Value::Null(lbug::LogicalType::Any))
         } else {
             Ok(Value::String(term.atom_to_string().unwrap_or_default()))
         }
@@ -479,7 +481,7 @@ fn term_to_value(term: Term) -> NifResult<Value> {
 
 // Define the NIF module with on_load
 rustler::init!(
-    "Elixir.RyugraphEx.Native",
+    "Elixir.LadybugEx.Native",
     [
         open_database,
         in_memory_database,

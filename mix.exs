@@ -4,7 +4,7 @@ defmodule LadybugEx.MixProject do
   def project do
     [
       app: :ladybug_ex,
-      version: "0.1.0",
+      version: "0.2.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -68,6 +68,7 @@ defmodule LadybugEx.MixProject do
       files: ~w(
         lib
         native/ladybug_nif/src
+        native/ladybug_nif/build.rs
         native/ladybug_nif/Cargo.toml
         native/ladybug_nif/Cargo.lock
         mix.exs

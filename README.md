@@ -29,7 +29,7 @@ Add `ladybug_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ladybug_ex, "~> 0.1.0"}
+    {:ladybug_ex, "~> 0.2.0"}
   ]
 end
 ```

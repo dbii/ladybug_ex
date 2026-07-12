@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-12
+
+### Added
+
+- Fixed-size ARRAY property type `{:array, type, size}` (e.g. `FLOAT[1536]`),
+  required for vector index columns
+- FTS results are now ordered by BM25 score (descending) and vector search
+  results by distance (ascending)
+
+### Changed
+
+- Upgraded the bundled LadybugDB engine (`lbug` crate) from 0.15 to 0.18.1
+- Tables created without an explicit primary key now get an auto-incrementing
+  `ladybug_id SERIAL` primary key instead of `ladybug_id INT64`, so inserts no
+  longer need to supply it
+- FTS and LLM functions validate their options before attempting to load the
+  extension, so invalid input returns a clear error even when the extension is
+  not installed
+
+### Fixed
+
+- Extensions (fts, vector, llm, json) failed to load with "symbol not found"
+  errors: the NIF library now exports the engine symbols extensions resolve at
+  runtime, and the published package includes the `build.rs` that configures
+  this
+- `Extensions.loaded?/2` always returned `false` due to a wrong result column
+  name and case-sensitive comparison
+- FTS and vector index CALL statements used positional arguments for optional
+  parameters, which the engine rejects; they now use named arguments
+- Vector index default `pu` parameter was `500`; the engine expects a 0.0-1.0
+  DOUBLE (now `0.05`)
+- JSON-typed query results (json extension) crashed the NIF; they are now
+  returned as serialized JSON strings
+
+### Known Limitations
+
+- The `httpfs` extension crashes the VM on load: the prebuilt extension binary
+  is ABI-incompatible with the engine compiled from the `lbug` crate (upstream
+  issue)
+
 ## [0.1.0] - 2025-01-01
 
 ### Added

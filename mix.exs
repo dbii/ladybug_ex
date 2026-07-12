@@ -69,6 +69,8 @@ defmodule LadybugEx.MixProject do
         lib
         native/ladybug_nif/src
         native/ladybug_nif/build.rs
+        native/ladybug_nif/linker-wrapper.sh
+        native/ladybug_nif/.cargo/config.toml
         native/ladybug_nif/Cargo.toml
         native/ladybug_nif/Cargo.lock
         mix.exs

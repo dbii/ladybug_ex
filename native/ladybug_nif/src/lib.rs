@@ -497,5 +497,44 @@ fn on_load(env: Env, _info: Term) -> bool {
     rustler::resource!(DatabaseResource, env);
     rustler::resource!(ConnectionResource, env);
     rustler::resource!(PreparedStatementResource, env);
+    #[cfg(target_os = "linux")]
+    promote_self_to_global_scope();
     true
+}
+
+/// Ladybug extensions are dlopen'ed at runtime with undefined engine symbols
+/// that the dynamic linker must resolve from already-loaded libraries. The
+/// BEAM loads NIF libraries with RTLD_LOCAL, which keeps this library's
+/// symbols out of the global lookup scope, so extension loading fails with
+/// "undefined symbol" errors. Re-dlopening ourselves with RTLD_NOLOAD |
+/// RTLD_GLOBAL promotes the already-loaded library into the global scope
+/// without loading a second copy.
+#[cfg(target_os = "linux")]
+fn promote_self_to_global_scope() {
+    use std::os::raw::{c_char, c_int, c_void};
+
+    #[repr(C)]
+    struct DlInfo {
+        dli_fname: *const c_char,
+        dli_fbase: *mut c_void,
+        dli_sname: *const c_char,
+        dli_saddr: *mut c_void,
+    }
+
+    extern "C" {
+        fn dladdr(addr: *const c_void, info: *mut DlInfo) -> c_int;
+        fn dlopen(filename: *const c_char, flags: c_int) -> *mut c_void;
+    }
+
+    const RTLD_NOW: c_int = 0x2;
+    const RTLD_NOLOAD: c_int = 0x4;
+    const RTLD_GLOBAL: c_int = 0x100;
+
+    unsafe {
+        let mut info: DlInfo = std::mem::zeroed();
+        let probe = promote_self_to_global_scope as *const c_void;
+        if dladdr(probe, &mut info) != 0 && !info.dli_fname.is_null() {
+            dlopen(info.dli_fname, RTLD_NOW | RTLD_GLOBAL | RTLD_NOLOAD);
+        }
+    }
 }

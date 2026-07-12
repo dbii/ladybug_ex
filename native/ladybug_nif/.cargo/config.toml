@@ -1,0 +1,8 @@
+# On Linux, link through a wrapper that strips rustc's version script so the
+# lbug engine symbols stay exported from the NIF cdylib — required for
+# extension loading. See linker-wrapper.sh for the full story.
+[target.x86_64-unknown-linux-gnu]
+linker = "./linker-wrapper.sh"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "./linker-wrapper.sh"

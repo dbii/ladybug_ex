@@ -18,20 +18,21 @@ jobs:
   build:
 
     name: Build and test
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
+    # The lbug 0.18 headers require C++20 <format>, which needs GCC 13+
     env:
-      CC: gcc-12
-      CXX: g++-12
+      CC: gcc-13
+      CXX: g++-13
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install GCC 12
+    - name: Install GCC 13
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-12 g++-12
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
+        sudo apt-get install -y gcc-13 g++-13
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
     - name: Set up Elixir
       uses: erlef/setup-beam@61e01a43a562a89bfc54c7f9a378ff67b03e4a21 # v1.16.0
       with:

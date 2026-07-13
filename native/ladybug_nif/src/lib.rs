@@ -1,6 +1,6 @@
 use parking_lot::Mutex;
-use rustler::{Encoder, Env, Error, NifResult, OwnedBinary, ResourceArc, Term};
-use lbug::{Connection, Database, PreparedStatement, SystemConfig, Value, QueryResult};
+use rustler::{Encoder, Env, ListIterator, NifResult, OwnedBinary, ResourceArc, Term};
+use lbug::{Connection, Database, LogicalType, PreparedStatement, SystemConfig, Value, QueryResult};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
@@ -434,11 +434,17 @@ fn execute<'a>(
     // Get the PreparedStatement from raw pointer - UNSAFE
     let stmt = unsafe { &mut *prepared_resource.stmt };
 
-    // Convert Elixir terms to Ladybug Values with proper lifetime management
-    let params_with_values: Vec<(String, Value)> = params
-        .into_iter()
-        .map(|(name, term)| Ok((name, term_to_value(term)?)))
-        .collect::<NifResult<Vec<_>>>()?;
+    // Convert Elixir terms to Ladybug Values. Any unsupported parameter value
+    // (scalar or list) returns a descriptive `{:error, message}` naming the
+    // parameter instead of raising a bare ArgumentError at the NIF boundary —
+    // see term_to_value_named.
+    let mut params_with_values: Vec<(String, Value)> = Vec::with_capacity(params.len());
+    for (name, term) in params {
+        match term_to_value_named(&name, term) {
+            Ok(value) => params_with_values.push((name, value)),
+            Err(message) => return Ok((atoms::error(), message).encode(env)),
+        }
+    }
 
     // Now convert to the expected format with string references
     let param_refs: Vec<(&str, Value)> = params_with_values
@@ -457,8 +463,24 @@ fn execute<'a>(
     }
 }
 
-// Helper function to convert Elixir terms to Ladybug Values
-fn term_to_value(term: Term) -> NifResult<Value> {
+/// Converts an Elixir term to a Ladybug `Value`, tagging any failure with the
+/// parameter name so `execute/3` can return `{:error, message}` instead of
+/// raising a bare `ArgumentError` at the NIF boundary. This covers every
+/// unsupported parameter type, not only lists.
+///
+/// List parameters are decoded per the element-type inference rules
+/// documented in the README's "Parameter types" section: an all-integer list
+/// becomes `List(Int64)`; an all-float (or mixed int+float, with ints
+/// promoted) list becomes `List(Double)`; an all-boolean list becomes
+/// `List(Bool)`; an all-valid-UTF-8-binary list becomes `List(String)`.
+/// Anything else — heterogeneous elements, `nil` elements, out-of-range
+/// integers, non-UTF-8 binaries, atoms, nested lists, improper lists, or an
+/// empty list — returns a descriptive error instead of encoding.
+fn term_to_value_named(name: &str, term: Term) -> Result<Value, String> {
+    if term.is_list() {
+        return list_term_to_value(name, term);
+    }
+
     if let Ok(i) = term.decode::<i64>() {
         Ok(Value::Int64(i))
     } else if let Ok(f) = term.decode::<f64>() {
@@ -470,13 +492,156 @@ fn term_to_value(term: Term) -> NifResult<Value> {
     } else if term.is_atom() {
         // Check for nil
         if term.atom_to_string().unwrap_or_default() == "nil" {
-            Ok(Value::Null(lbug::LogicalType::Any))
+            Ok(Value::Null(LogicalType::Any))
         } else {
             Ok(Value::String(term.atom_to_string().unwrap_or_default()))
         }
     } else {
-        Err(Error::BadArg)
+        Err(format!("unsupported parameter type for ${name}"))
     }
+}
+
+/// Decodes a non-empty, proper Elixir list into a `Value::List`.
+///
+/// Safety: Rustler's `ListIterator` panics if it reaches an improper list's
+/// non-nil tail (see rustler's `types::list::ListIterator::next`). This
+/// function establishes that `term` is a proper list via `Term::list_length()`
+/// — which returns `Err` for improper lists without panicking — before ever
+/// constructing a `ListIterator`, so the descriptive error below is actually
+/// reachable instead of crashing the NIF.
+fn list_term_to_value(name: &str, term: Term) -> Result<Value, String> {
+    let len = term
+        .list_length()
+        .map_err(|_| format!("unsupported parameter type for ${name}: improper list"))?;
+
+    if len == 0 {
+        return Err(format!(
+            "empty list parameters are unsupported for ${name} — no element type can be inferred"
+        ));
+    }
+
+    // Safe: `list_length()` succeeded above, so `term` is a proper list and
+    // this iterator cannot hit the improper-tail panic path.
+    let items: Vec<Term> = term
+        .decode::<ListIterator>()
+        .map_err(|_| format!("unsupported parameter type for ${name}: invalid list"))?
+        .collect();
+
+    enum Elem {
+        Int(i64),
+        Float(f64),
+        Bool(bool),
+        Str(String),
+    }
+
+    let mut elems: Vec<Elem> = Vec::with_capacity(items.len());
+    for item in items {
+        if item.is_atom() {
+            match item.atom_to_string().unwrap_or_default().as_str() {
+                "true" => elems.push(Elem::Bool(true)),
+                "false" => elems.push(Elem::Bool(false)),
+                "nil" => {
+                    return Err(format!(
+                        "unsupported parameter type for ${name}: null-containing list"
+                    ))
+                }
+                _ => {
+                    return Err(format!(
+                        "unsupported parameter type for ${name}: atom inside list"
+                    ))
+                }
+            }
+        } else if item.is_integer() {
+            match item.decode::<i64>() {
+                Ok(i) => elems.push(Elem::Int(i)),
+                Err(_) => {
+                    return Err(format!(
+                        "unsupported parameter type for ${name}: integer out of range in list"
+                    ))
+                }
+            }
+        } else if item.is_float() {
+            match item.decode::<f64>() {
+                Ok(f) => elems.push(Elem::Float(f)),
+                Err(_) => {
+                    return Err(format!(
+                        "unsupported parameter type for ${name}: invalid float in list"
+                    ))
+                }
+            }
+        } else if item.is_binary() {
+            match item.decode::<String>() {
+                Ok(s) => elems.push(Elem::Str(s)),
+                Err(_) => {
+                    return Err(format!(
+                        "unsupported parameter type for ${name}: invalid UTF-8 binary in list"
+                    ))
+                }
+            }
+        } else if item.is_list() {
+            // Nested lists are a non-goal (see PRD §3).
+            return Err(format!(
+                "unsupported parameter type for ${name}: nested list"
+            ));
+        } else {
+            return Err(format!(
+                "unsupported parameter type for ${name}: unsupported element type in list"
+            ));
+        }
+    }
+
+    if elems.iter().all(|e| matches!(e, Elem::Bool(_))) {
+        let values = elems
+            .into_iter()
+            .map(|e| match e {
+                Elem::Bool(b) => Value::Bool(b),
+                _ => unreachable!(),
+            })
+            .collect();
+        return Ok(Value::List(LogicalType::Bool, values));
+    }
+
+    if elems.iter().all(|e| matches!(e, Elem::Str(_))) {
+        let values = elems
+            .into_iter()
+            .map(|e| match e {
+                Elem::Str(s) => Value::String(s),
+                _ => unreachable!(),
+            })
+            .collect();
+        return Ok(Value::List(LogicalType::String, values));
+    }
+
+    if elems
+        .iter()
+        .all(|e| matches!(e, Elem::Int(_) | Elem::Float(_)))
+    {
+        let all_int = elems.iter().all(|e| matches!(e, Elem::Int(_)));
+        return if all_int {
+            let values = elems
+                .into_iter()
+                .map(|e| match e {
+                    Elem::Int(i) => Value::Int64(i),
+                    _ => unreachable!(),
+                })
+                .collect();
+            Ok(Value::List(LogicalType::Int64, values))
+        } else {
+            let values = elems
+                .into_iter()
+                .map(|e| match e {
+                    Elem::Int(i) => Value::Double(i as f64),
+                    Elem::Float(f) => Value::Double(f),
+                    _ => unreachable!(),
+                })
+                .collect();
+            Ok(Value::List(LogicalType::Double, values))
+        };
+    }
+
+    Err(format!(
+        "unsupported parameter type for ${name}: heterogeneous list"
+    ))
 }
 
 // Define the NIF module with on_load

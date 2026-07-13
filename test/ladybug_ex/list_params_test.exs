@@ -122,6 +122,77 @@ defmodule LadybugEx.ListParamsTest do
     end
   end
 
+  describe "T3b — mixed-list promotion rejects integers outside the exact f64 range" do
+    # 2^53 is the largest integer magnitude exactly representable as an
+    # IEEE-754 double; mixed-list promotion accepts |i| <= 2^53 and rejects
+    # anything beyond it instead of silently rounding. Pure-integer lists are
+    # unaffected (full i64 fidelity, no promotion).
+    @max_exact 9_007_199_254_740_992
+
+    setup %{conn: conn} do
+      {:ok, _} =
+        Connection.query(conn, "CREATE NODE TABLE PromT(id INT64, ys DOUBLE[], PRIMARY KEY(id))")
+
+      {:ok, stmt} = Connection.prepare(conn, "CREATE (:PromT {id: $id, ys: $ys})")
+      {:ok, stmt: stmt}
+    end
+
+    test "2^53 mixed with a float is accepted", %{conn: conn, stmt: stmt} do
+      assert {:ok, _} = Connection.execute(conn, stmt, id: 1, ys: [@max_exact, 0.5])
+
+      assert {:ok, [%{"t.ys" => ys}]} =
+               Connection.query(conn, "MATCH (t:PromT) WHERE t.id = 1 RETURN t.ys")
+
+      assert ys == [@max_exact * 1.0, 0.5]
+    end
+
+    test "2^53 + 1 mixed with a float is rejected", %{conn: conn, stmt: stmt} do
+      assert {:error, msg} = Connection.execute(conn, stmt, id: 2, ys: [@max_exact + 1, 0.5])
+      assert msg =~ "ys"
+      assert msg =~ "exceeds exact f64 range"
+    end
+
+    test "-2^53 mixed with a float is accepted", %{conn: conn, stmt: stmt} do
+      assert {:ok, _} = Connection.execute(conn, stmt, id: 3, ys: [-@max_exact, 0.5])
+
+      assert {:ok, [%{"t.ys" => ys}]} =
+               Connection.query(conn, "MATCH (t:PromT) WHERE t.id = 3 RETURN t.ys")
+
+      assert ys == [-(@max_exact * 1.0), 0.5]
+    end
+
+    test "-(2^53 + 1) mixed with a float is rejected", %{conn: conn, stmt: stmt} do
+      assert {:error, msg} = Connection.execute(conn, stmt, id: 4, ys: [-(@max_exact + 1), 0.5])
+      assert msg =~ "ys"
+      assert msg =~ "exceeds exact f64 range"
+    end
+
+    test "rejection applies in both element orders (promotion and post-promotion paths)",
+         %{conn: conn, stmt: stmt} do
+      # Integer first: the float that follows triggers retroactive promotion
+      # of the already-collected integer.
+      assert {:error, msg1} = Connection.execute(conn, stmt, id: 5, ys: [@max_exact + 1, 0.5])
+      assert msg1 =~ "exceeds exact f64 range"
+
+      # Float first: the integer is converted directly on arrival.
+      assert {:error, msg2} = Connection.execute(conn, stmt, id: 6, ys: [0.5, @max_exact + 1])
+      assert msg2 =~ "exceeds exact f64 range"
+    end
+
+    test "pure-integer lists keep full i64 fidelity beyond 2^53", %{conn: conn} do
+      {:ok, _} =
+        Connection.query(conn, "CREATE NODE TABLE BigInts(id INT64, xs INT64[], PRIMARY KEY(id))")
+
+      {:ok, stmt} = Connection.prepare(conn, "CREATE (:BigInts {id: $id, xs: $xs})")
+
+      big = @max_exact + 1
+      assert {:ok, _} = Connection.execute(conn, stmt, id: 1, xs: [big])
+
+      assert {:ok, [%{"t.xs" => [^big]}]} =
+               Connection.query(conn, "MATCH (t:BigInts) RETURN t.xs")
+    end
+  end
+
   describe "T4 — unsupported parameters return {:error, msg} naming the parameter" do
     setup %{conn: conn} do
       {:ok, _} =
@@ -182,6 +253,64 @@ defmodule LadybugEx.ListParamsTest do
       bad_binary = <<0xFF, 0xFE>>
       assert {:error, msg} = Connection.execute(conn, stmt, base_params(ss: [bad_binary]))
       assert msg =~ "ss"
+    end
+
+    test "nested list ([[1, 2]])", %{conn: conn, stmt: stmt} do
+      assert {:error, msg} = Connection.execute(conn, stmt, base_params(xs: [[1, 2]]))
+      assert msg =~ "xs"
+      assert msg =~ "nested"
+    end
+
+    test "atom inside list ([:unexpected])", %{conn: conn, stmt: stmt} do
+      assert {:error, msg} = Connection.execute(conn, stmt, base_params(xs: [:unexpected]))
+      assert msg =~ "xs"
+      assert msg =~ "atom"
+    end
+
+    test "execute!/3 raises a descriptive RuntimeError naming the parameter, not an ArgumentError",
+         %{conn: conn, stmt: stmt} do
+      error =
+        assert_raise RuntimeError, fn ->
+          Connection.execute!(conn, stmt, base_params(xs: [1, "a"]))
+        end
+
+      assert error.message =~ "xs"
+      refute is_struct(error, ArgumentError)
+    end
+  end
+
+  describe "P2 — large-list regression (conversion stays linear and CI-safe)" do
+    test "a 100_000-element float list converts, round-trips, and completes quickly", %{
+      conn: conn
+    } do
+      {:ok, _} =
+        Connection.query(
+          conn,
+          "CREATE NODE TABLE BigList(id INT64, ys DOUBLE[], PRIMARY KEY(id))"
+        )
+
+      {:ok, stmt} = Connection.prepare(conn, "CREATE (:BigList {id: $id, ys: $ys})")
+
+      n = 100_000
+      vec = for i <- 1..n, do: i * 1.0
+
+      {insert_us, insert_result} =
+        :timer.tc(fn -> Connection.execute(conn, stmt, id: 1, ys: vec) end)
+
+      assert {:ok, _} = insert_result
+
+      # Generous bound — the point is to catch accidental quadratic behavior
+      # in the conversion path (which would take minutes at this size), not
+      # to benchmark. Typical time on a dev laptop is well under a second.
+      assert insert_us < 10_000_000
+
+      assert {:ok, [%{"n" => ^n, "first" => 1.0, "last" => last}]} =
+               Connection.query(
+                 conn,
+                 "MATCH (t:BigList) RETURN size(t.ys) AS n, t.ys[1] AS first, t.ys[#{n}] AS last"
+               )
+
+      assert last == n * 1.0
     end
   end
 

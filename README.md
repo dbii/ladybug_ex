@@ -131,6 +131,75 @@ LadybugEx.Connection.execute!(conn, stmt,
 )
 ```
 
+### Parameter types
+
+Prepared-statement parameters (`Connection.execute/3` / `execute!/3`) accept:
+
+- `integer` -> `INT64` (must fit in a signed 64-bit integer)
+- `float` -> `DOUBLE`
+- `String.t()` (binary) -> `STRING` (must be valid UTF-8)
+- `boolean` -> `BOOL`
+- `nil` -> `NULL`
+- any other atom -> coerced to its string name (e.g. `:active` -> `"active"`)
+- `list` -> a `LIST` value, per the element-type inference rules below
+
+#### List parameters
+
+A non-empty, proper Elixir list is inferred from its elements:
+
+| Elixir elements | Encoded as |
+|---|---|
+| all integers (each within signed 64-bit range) | `INT64[]` |
+| all floats, or mixed integers and floats | `DOUBLE[]` (integers promoted to floats) |
+| all booleans | `BOOL[]` |
+| all valid-UTF-8 binaries | `STRING[]` |
+| anything else | `{:error, message}` naming the parameter |
+
+The following list shapes are rejected with a descriptive `{:error, message}`
+(not raised) naming the parameter, rather than encoded:
+
+- **Empty lists** — no element type can be inferred from `[]`, so it is
+  rejected rather than guessed.
+- **Lists containing `nil`** (e.g. `[1, nil]`) — NULL-in-LIST is not supported.
+- **Integers outside the signed 64-bit range** — not silently round-tripped
+  through floats.
+- **Improper lists** (e.g. `[1 | 2]`).
+- **Non-UTF-8 binaries** in a string-list position — BLOB parameters are out
+  of scope.
+- **Atoms inside a list** (other than as list elements matching one of the
+  homogeneous shapes above) — the top-level atom -> string coercion does not
+  extend into list elements.
+- **Heterogeneous lists** (e.g. `[1, "a"]`) that don't fit one of the shapes
+  above.
+- **Nested lists** (e.g. `[[1, 2]]`) — not supported by this version.
+
+> **Charlist caveat:** an Elixir charlist *is* an integer list at the term
+> level, so `~c"abc"` binds as `INT64[]` (`[97, 98, 99]`), **not** as a
+> string. If a parameter might be typed as a charlist by a caller, convert it
+> to a binary (`to_string/1` or `List.to_string/1`) before passing it in.
+
+#### Binding a list into a fixed-size ARRAY column (e.g. vector embeddings)
+
+A `FLOAT[N]` (or `DOUBLE[N]`) fixed-size ARRAY column — the shape vector
+indexes require — accepts a plain list parameter directly; no cast or wrapper
+API is needed:
+
+```elixir
+LadybugEx.Schema.create_node_table(conn, "Document", [
+  {:id, :int64, primary_key: true},
+  {:embedding, {:array, :float, 1536}}
+])
+
+{:ok, stmt} =
+  LadybugEx.Connection.prepare(conn, "CREATE (:Document {id: $id, embedding: $embedding})")
+
+LadybugEx.Connection.execute!(conn, stmt, id: 1, embedding: my_1536_float_list)
+```
+
+The list is encoded as `DOUBLE[]` per the inference table above; the engine
+implicitly narrows it into the column's `FLOAT[1536]` (32-bit) storage, same
+as it does for a bare `DOUBLE` -> `FLOAT` scalar parameter.
+
 ### Transactions
 
 ```elixir

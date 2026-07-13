@@ -155,6 +155,21 @@ A non-empty, proper Elixir list is inferred from its elements:
 | all valid-UTF-8 binaries | `STRING[]` |
 | anything else | `{:error, message}` naming the parameter |
 
+**Mixed-list promotion is exact or rejected:** when integers are promoted to
+floats in a mixed list, each integer must be exactly representable as an
+IEEE-754 double — magnitude at most `2^53` (`9_007_199_254_740_992`). An
+integer beyond that in a mixed list returns `{:error, message}` naming the
+parameter (e.g. `"integer 9007199254740993 in mixed numeric list for $xs
+exceeds exact f64 range"`) rather than silently rounding. Pure-integer lists
+are unaffected: they encode as `INT64[]` with full 64-bit fidelity and never
+go through promotion.
+
+**Sizing:** list parameters are converted on the calling scheduler and are
+sized for embedding-scale payloads (hundreds to a few thousand elements per
+list; conversion is a single linear pass). There is no hard length cap —
+callers accepting untrusted or unbounded input should bound list sizes
+themselves before passing them as parameters.
+
 The following list shapes are rejected with a descriptive `{:error, message}`
 (not raised) naming the parameter, rather than encoded:
 
@@ -163,6 +178,8 @@ The following list shapes are rejected with a descriptive `{:error, message}`
 - **Lists containing `nil`** (e.g. `[1, nil]`) — NULL-in-LIST is not supported.
 - **Integers outside the signed 64-bit range** — not silently round-tripped
   through floats.
+- **Integers beyond `2^53` in magnitude inside a mixed numeric list** — see
+  the exact-promotion rule above.
 - **Improper lists** (e.g. `[1 | 2]`).
 - **Non-UTF-8 binaries** in a string-list position — BLOB parameters are out
   of scope.

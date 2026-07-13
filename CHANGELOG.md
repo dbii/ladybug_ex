@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - List parameter support for prepared statements: `Connection.execute/3` now
   accepts Elixir lists as parameter values (`embedding: [0.1, 0.2, ...]`),
-  encoded per an element-type inference rule (all-integer -> `INT64[]`,
-  any-float/mixed -> `DOUBLE[]` with integers promoted, all-boolean ->
-  `BOOL[]`, all-valid-UTF-8-binary -> `STRING[]`). This also covers binding a
+  encoded per an element-type inference rule (all-integer -> `INT64[]`;
+  any-float/mixed -> `DOUBLE[]` with integers promoted, where promotion
+  requires each integer to be exactly representable as a double — magnitude
+  at most 2^53 — and rejects the parameter otherwise; all-boolean ->
+  `BOOL[]`; all-valid-UTF-8-binary -> `STRING[]`). This also covers binding a
   list into a fixed-size `FLOAT[N]`/`DOUBLE[N]` ARRAY column (e.g. vector
   embeddings) — no new API surface was needed; a `List(Double)` param binds
   directly into a `FLOAT[N]` column. See the README's "Parameter types"

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- List parameter support for prepared statements: `Connection.execute/3` now
+  accepts Elixir lists as parameter values (`embedding: [0.1, 0.2, ...]`),
+  encoded per an element-type inference rule (all-integer -> `INT64[]`,
+  any-float/mixed -> `DOUBLE[]` with integers promoted, all-boolean ->
+  `BOOL[]`, all-valid-UTF-8-binary -> `STRING[]`). This also covers binding a
+  list into a fixed-size `FLOAT[N]`/`DOUBLE[N]` ARRAY column (e.g. vector
+  embeddings) — no new API surface was needed; a `List(Double)` param binds
+  directly into a `FLOAT[N]` column. See the README's "Parameter types"
+  section for the full inference table, unsupported-shape list of edge cases
+  (empty lists, `nil` elements, out-of-range integers, non-UTF-8 binaries,
+  improper lists, nested lists), and the charlist caveat.
+
 ### Changed
 
 - Upgraded the bundled LadybugDB engine (`lbug` crate) from 0.18.1 to 0.21.2.
@@ -14,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recreated. Extensions are now loaded from the `v0.21.0` directory of the
   extension server (the engine's `LBUG_EXTENSION_VERSION`); re-vendor the
   matching binaries.
+
+- **Breaking (error shape):** unsupported prepared-statement parameter values
+  — of any type, not only lists — now return a descriptive
+  `{:error, message}` from `execute/3` (and raise a descriptive `RuntimeError`
+  from `execute!/3`, unchanged) naming the offending parameter, instead of
+  raising a bare `ArgumentError` at the NIF boundary. Existing code that
+  pattern-matches on `{:ok, results}` / `{:error, reason}` is unaffected; code
+  that specifically caught `ArgumentError` from `execute/3` needs to switch to
+  matching `{:error, reason}`.
 
 ### Fixed
 

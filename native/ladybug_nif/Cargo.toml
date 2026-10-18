@@ -11,13 +11,23 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rustler = "0.35.0"
-lbug = "0.18.1"
+# Pinned EXACTLY: the vendored Ladybug extensions (vector, fts, ...) are built
+# per engine version and the engine version must equal the crate version.
+# Bump this, the committed Cargo.lock, and the vendored extensions together.
+lbug = "=0.18.1"
 # Additional dependencies for thread safety and error handling
 thiserror = "2.0"
 once_cell = "1.20"
 parking_lot = "0.12"
+# dlopen flag constants for promote_self_to_global_scope (values differ per OS)
+libc = "0.2"
 
 # Note: do not enable LTO. Fat LTO internalizes the lbug C++ engine symbols,
 # so they are not exported from the NIF cdylib — and Ladybug extensions
 # (vector, fts, llm, ...) resolve engine symbols from the host process at
 # dlopen time. LTO breaks all extension loading.
+
+[profile.release]
+# Explicit: see the note above. Fat LTO strips the engine symbols the
+# extensions dlopen against. Keep thin/fat LTO off for every profile.
+lto = false

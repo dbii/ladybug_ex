@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Reproducible engine build. The `lbug` crate's build script links a prebuilt
+  `liblbug.a` downloaded from the GitHub *latest* release unless
+  `LBUG_BUILD_FROM_SOURCE` is set, so the engine version depended on the day
+  of the first build on a machine, not on `Cargo.toml` (observed: crate 0.18.1
+  linking engine 0.21.2, after which the 0.18.1 vector extension failed to
+  load). The NIF crate now sets `LBUG_BUILD_FROM_SOURCE=1` in
+  `.cargo/config.toml`, pins `lbug = "=0.18.1"`, commits `Cargo.lock`, and
+  declares `lto = false` explicitly for the release profile.
+- Extension loading on macOS under Erlang/OTP 29. OTP 29 dlopens NIF
+  libraries with `RTLD_LOCAL` on macOS (previously the default, global,
+  scope), which excludes the engine symbols from the flat-namespace lookups
+  the extensions use ("symbol not found in flat namespace
+  '__ZN4lbug11transaction17DUMMY_TRANSACTIONE'"). The existing
+  self-promotion to the global scope (`RTLD_NOLOAD | RTLD_GLOBAL`) now runs
+  on macOS as well as Linux, using `libc`'s platform `RTLD_*` constants.
+
 ## [0.2.1] - 2026-07-12
 
 ### Fixed

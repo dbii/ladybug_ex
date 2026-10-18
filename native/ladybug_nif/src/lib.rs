@@ -497,19 +497,22 @@ fn on_load(env: Env, _info: Term) -> bool {
     rustler::resource!(DatabaseResource, env);
     rustler::resource!(ConnectionResource, env);
     rustler::resource!(PreparedStatementResource, env);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     promote_self_to_global_scope();
     true
 }
 
 /// Ladybug extensions are dlopen'ed at runtime with undefined engine symbols
 /// that the dynamic linker must resolve from already-loaded libraries. The
-/// BEAM loads NIF libraries with RTLD_LOCAL, which keeps this library's
-/// symbols out of the global lookup scope, so extension loading fails with
-/// "undefined symbol" errors. Re-dlopening ourselves with RTLD_NOLOAD |
-/// RTLD_GLOBAL promotes the already-loaded library into the global scope
-/// without loading a second copy.
-#[cfg(target_os = "linux")]
+/// BEAM loads NIF libraries with RTLD_LOCAL (Linux always; macOS since
+/// OTP 29 — "Fixed potential symbol clashing on MacOS by passing RTLD_LOCAL
+/// to dlopen"), which keeps this library's symbols out of the global lookup
+/// scope. On macOS that also excludes them from the flat-namespace lookups
+/// the extensions use, so loading fails with "symbol not found in flat
+/// namespace". Re-dlopening ourselves with RTLD_NOLOAD | RTLD_GLOBAL
+/// promotes the already-loaded library into the global scope without
+/// loading a second copy. RTLD_* values differ per platform, hence libc.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn promote_self_to_global_scope() {
     use std::os::raw::{c_char, c_int, c_void};
 
@@ -526,9 +529,9 @@ fn promote_self_to_global_scope() {
         fn dlopen(filename: *const c_char, flags: c_int) -> *mut c_void;
     }
 
-    const RTLD_NOW: c_int = 0x2;
-    const RTLD_NOLOAD: c_int = 0x4;
-    const RTLD_GLOBAL: c_int = 0x100;
+    const RTLD_NOW: c_int = libc::RTLD_NOW;
+    const RTLD_NOLOAD: c_int = libc::RTLD_NOLOAD;
+    const RTLD_GLOBAL: c_int = libc::RTLD_GLOBAL;
 
     unsafe {
         let mut info: DlInfo = std::mem::zeroed();

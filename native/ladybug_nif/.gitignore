@@ -1,3 +1,4 @@
 /target/
 **/*.rs.bk
-Cargo.lock
+# Cargo.lock is committed on purpose: this crate builds a binary (cdylib) and the
+# exact lbug resolution must be reproducible. Do not re-add it here.

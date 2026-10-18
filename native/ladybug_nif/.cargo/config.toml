@@ -6,3 +6,12 @@ linker = "./linker-wrapper.sh"
 
 [target.aarch64-unknown-linux-gnu]
 linker = "./linker-wrapper.sh"
+
+# Build the lbug C++ engine from the source bundled in the lbug crate, so the
+# engine version always equals the pinned crate version. Without this, lbug's
+# build.rs downloads the prebuilt liblbug.a of the GitHub *latest* release
+# (whatever it is on the day of the first build) and caches it under the cargo
+# registry — the engine then silently diverges from the vendored extensions
+# (observed: crate 0.18.1 linking engine 0.21.2, breaking extension loading).
+[env]
+LBUG_BUILD_FROM_SOURCE = "1"

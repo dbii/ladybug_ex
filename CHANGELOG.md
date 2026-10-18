@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded the bundled LadybugDB engine (`lbug` crate) from 0.18.1 to 0.21.2.
+  Storage version moves from 42 to 47, so databases created by 0.18.x must be
+  recreated. Extensions are now loaded from the `v0.21.0` directory of the
+  extension server (the engine's `LBUG_EXTENSION_VERSION`); re-vendor the
+  matching binaries.
+
 ### Fixed
 
 - Reproducible engine build. The `lbug` crate's build script links a prebuilt

@@ -11,10 +11,12 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rustler = "0.35.0"
-# Pinned EXACTLY: the vendored Ladybug extensions (vector, fts, ...) are built
-# per engine version and the engine version must equal the crate version.
+# Pinned EXACTLY. The engine is compiled from the source bundled in this crate
+# (see .cargo/config.toml), so the engine version equals the crate version.
+# Extensions are built per *minor*: the engine loads them from the directory
+# named by LBUG_EXTENSION_VERSION in its CMakeLists.txt (0.21.2 -> "0.21.0").
 # Bump this, the committed Cargo.lock, and the vendored extensions together.
-lbug = "=0.18.1"
+lbug = "=0.21.2"
 # Additional dependencies for thread safety and error handling
 thiserror = "2.0"
 once_cell = "1.20"

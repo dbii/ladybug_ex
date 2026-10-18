@@ -240,9 +240,9 @@ dependencies = [
 
 [[package]]
 name = "lbug"
-version = "0.18.1"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3a3c31a30c93756dcdf76fadb3d35ea237ad750a530d49cf4bce8ee073092c8"
+checksum = "862a51324bf4785f3f1e4dca9b86d38745b543c0f06b1a5731956e66979879c3"
 dependencies = [
  "cmake",
  "cxx",
@@ -252,6 +252,7 @@ dependencies = [
  "serde_json",
  "time",
  "uuid",
+ "vcpkg",
 ]
 
 [[package]]
@@ -593,6 +594,12 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "vcpkg"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "wasm-bindgen"
